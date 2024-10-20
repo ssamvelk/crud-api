@@ -3,9 +3,9 @@ import { v4 as uuidv4, validate } from 'uuid';
 import * as dotenv from 'dotenv';
 import * as url from 'url';
 
-import { ErrorMessage } from '../src/helpers/enums.ts';
-import { readData, writeData } from './helpers/fs.helper.ts';
-import { IUser } from './helpers/interfaces.ts';
+import { ErrorMessage } from './helpers/enums';
+import { readData, writeData } from './helpers/fs.helper';
+import { IUser } from './helpers/interfaces';
 
 dotenv.config();
 
@@ -107,7 +107,7 @@ const requestHandler = async (
             const { username, age, hobbies }: Omit<IUser, 'id'> =
               JSON.parse(body);
 
-            if (!username && !age && !Array.isArray(hobbies)) {
+            if (!username || !age || !Array.isArray(hobbies)) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ message: ErrorMessage.INVALID_INPUT }));
 
@@ -124,17 +124,9 @@ const requestHandler = async (
               return;
             }
 
-            if (username) {
-              users[index].username = username;
-            }
-
-            if (age) {
-              users[index].age = age;
-            }
-
-            if (username) {
-              users[index].hobbies = hobbies;
-            }
+            users[index].username = username;
+            users[index].age = age;
+            users[index].hobbies = hobbies;
 
             await writeData(users);
 

@@ -1,4 +1,4 @@
-import { IUser } from './interfaces.ts';
+import { IUser } from './interfaces';
 import * as fs from 'fs/promises';
 
 const DATA_FILE = 'users.json';

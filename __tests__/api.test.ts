@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { createServer } from '../src/server';
-import { ErrorMessage } from '../src/helpers/enums.ts';
-import { resetDataFile } from '../src/helpers/fs.helper.ts';
+import { ErrorMessage } from '../src/helpers/enums';
+import { resetDataFile } from '../src/helpers/fs.helper';
 
 const app = createServer();
 
