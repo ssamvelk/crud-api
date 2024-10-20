@@ -1,37 +1,16 @@
 import * as http from 'http';
-import * as fs from 'fs/promises';
 import { v4 as uuidv4, validate } from 'uuid';
 import * as dotenv from 'dotenv';
 import * as url from 'url';
 
+import { ErrorMessage } from '../src/helpers/enums.ts';
+import { readData, writeData } from './helpers/fs.helper.ts';
+import { IUser } from './helpers/interfaces.ts';
+
 dotenv.config();
 
 const PORT = process.env.PORT || 4000;
-const DATA_FILE = 'users.json';
 
-interface IUser {
-  id: string;
-  username: string;
-  age: number;
-  hobbies: string[];
-}
-
-// Функция для чтения данных из файла
-async function readData(): Promise<IUser[]> {
-  try {
-    const data = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    return [];
-  }
-}
-
-// Функция для записи данных в файл
-async function writeData(users: IUser[]): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(users, null, 2));
-}
-
-// Обработчик запросов
 const requestHandler = async (
   req: http.IncomingMessage,
   res: http.ServerResponse
@@ -67,7 +46,7 @@ const requestHandler = async (
 
             if (!username || !age || !Array.isArray(hobbies)) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ message: 'Invalid input' }));
+              res.end(JSON.stringify({ message: ErrorMessage.INVALID_INPUT }));
 
               return;
             }
@@ -88,30 +67,28 @@ const requestHandler = async (
 
         default:
           res.writeHead(405, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ message: 'Method not allowed' }));
+          res.end(JSON.stringify({ message: ErrorMessage.METHOD_NOT_ALLOWED }));
 
           break;
       }
     } else if (pathname?.startsWith('/api/users/')) {
-      const userId = pathname.split('/api/users/')[1]; // Получаем userId из URL
-      console.log('>>>userId', userId);
+      const userId = pathname.split('/api/users/')[1];
 
       if (!userId || !validate(userId)) {
         res.writeHead(400);
-        res.end(JSON.stringify({ message: 'Invalid user ID' }));
+        res.end(JSON.stringify({ message: ErrorMessage.INVALID_USER_ID }));
 
         return;
       }
 
       switch (req.method) {
         case 'GET':
-          // Получаем пользователя по ID
           const users = await readData();
           const user = users.find((u) => u.id === userId);
 
           if (!user) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'User  not found' }));
+            res.end(JSON.stringify({ message: ErrorMessage.USER_NOT_FOUNT }));
           } else {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(user));
@@ -127,16 +104,12 @@ const requestHandler = async (
           });
 
           req.on('end', async () => {
-            const {
-              username,
-              age,
-              hobbies,
-            }: { username: string; age: number; hobbies: string[] } =
+            const { username, age, hobbies }: Omit<IUser, 'id'> =
               JSON.parse(body);
 
             if (!username && !age && !Array.isArray(hobbies)) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ message: 'Invalid input' }));
+              res.end(JSON.stringify({ message: ErrorMessage.INVALID_INPUT }));
 
               return;
             }
@@ -146,7 +119,7 @@ const requestHandler = async (
 
             if (index === -1) {
               res.writeHead(404, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ message: 'User  not found' }));
+              res.end(JSON.stringify({ message: ErrorMessage.USER_NOT_FOUNT }));
 
               return;
             }
@@ -177,7 +150,7 @@ const requestHandler = async (
 
           if (index === -1) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'User  not found' }));
+            res.end(JSON.stringify({ message: ErrorMessage.USER_NOT_FOUNT }));
 
             return;
           }
@@ -193,25 +166,32 @@ const requestHandler = async (
 
         default:
           res.writeHead(405, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ message: 'Method not allowed' }));
+          res.end(JSON.stringify({ message: ErrorMessage.METHOD_NOT_ALLOWED }));
 
           break;
       }
     } else {
-      // Обработка несуществующих маршрутов
       res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ message: 'Endpoint not found' }));
+      res.end(JSON.stringify({ message: ErrorMessage.ENDROINT_NOT_FOUND }));
     }
   } catch (error) {
     console.error('Server error:', error);
 
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ message: 'Internal server error' }));
+    res.end(JSON.stringify({ message: ErrorMessage.INTERNAL_SERVER_ERROR }));
   }
 };
 
-// Создаем и запускаем сервер
-const server = http.createServer(requestHandler);
-server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+export const createServer = () => {
+  const server = http.createServer(requestHandler);
+
+  server.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+
+  return server;
+};
+
+if (require.main === module) {
+  createServer();
+}
